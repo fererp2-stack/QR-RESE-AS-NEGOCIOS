@@ -71,7 +71,7 @@
   // ===== 1) PEGA AQUÍ LA URL DE TU APLICACIÓN WEB (Implementar → Aplicación web) =====
   const EXEC_URL = 'https://script.google.com/macros/s/AKfycbzYzDlIu9Ok8NUCCMpPnTx0pJnvX3mnZ4cF0WfQAXEPGRUXTV9eLlq4mDpO_W_1oH4zuQ/exec';
 
-  // Deben coincidir con SPLASH_DEF de index.html (Apps Script)
+  // Deben coincidir con SPLASH_DEF de INDEXHTML.html (Apps Script)
   const DEFECTOS = { google: '¡Regálanos tu reseña!', whatsapp: '¡Escríbenos!', otro: '¡Síguenos!' };
   const ABRIENDO = {
     google: 'Abriendo Google Reseñas…', instagram: 'Abriendo Instagram…', tiktok: 'Abriendo TikTok…',
@@ -143,9 +143,12 @@
       $('falta').hidden = false;
       return;
     }
+    const qs = new URLSearchParams();
+    qs.set('gh', location.origin + location.pathname);
     const v = new URLSearchParams(location.search).get('v');
+    if (v && /^[a-z]{1,20}$/.test(v)) qs.set('v', v);
     const app = $('app');
-    app.src = EXEC_URL + (v && /^[a-z]{1,20}$/.test(v) ? '?v=' + v : '');
+    app.src = EXEC_URL + '?' + qs.toString();
     app.hidden = false;
   }
 
