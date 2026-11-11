@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#FFFFFF">
+  <title>QR Reseñas &amp; Redes</title>
+  <!--
+    GITHUB PAGES · QR RESEÑAS & REDES
+    Hace dos cosas con un solo archivo:
+     1) MÁSCARA: sin parámetros (o con ?v=master) muestra tu app de Apps Script a
+        pantalla completa, sin la franja "Esta aplicación fue creada por un usuario de Google".
+     2) BIENVENIDA: si el QR trae ?g=PLACE_ID o ?to=URL, muestra el logo del negocio y
+        un mensaje durante ~1,2 s y luego abre el destino (Google Reseñas o la red social).
+    Instalación: pega tu URL /exec en EXEC_URL, sube este archivo como index.html a un
+    repositorio público y activa GitHub Pages (Settings → Pages → Deploy from branch).
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://drive.google.com">
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;background:#FFFFFF;color:#111827;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+    [hidden]{display:none!important}
+    #app{position:fixed;inset:0;width:100%;height:100%;border:0;display:block}
+    .splash{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px 24px calc(32px + env(safe-area-inset-bottom));text-align:center;background:radial-gradient(circle at 50% 30%,#F8FAFC 0,#FFFFFF 60%)}
+    .logo{width:128px;height:128px;border-radius:50%;background:#111827;color:#FFFFFF;display:grid;place-items:center;font-weight:700;font-size:42px;overflow:hidden;box-shadow:0 14px 40px rgba(16,24,40,.18);animation:pop .55s cubic-bezier(.2,.8,.2,1) both}
+    .logo img{width:100%;height:100%;object-fit:contain;background:#FFFFFF}
+    .nombre{font-weight:700;font-size:15px;color:#5B6476;max-width:320px;animation:sube .4s .15s cubic-bezier(.2,.8,.2,1) both}
+    .estrellas{display:flex;gap:6px}
+    .estrellas svg{width:34px;height:34px;fill:#E5E7EB;animation:estrella .32s cubic-bezier(.2,.8,.2,1) both}
+    .msg{font-family:'Dancing Script',cursive;font-weight:700;font-size:clamp(34px,10vw,48px);line-height:1.15;max-width:360px;animation:sube .45s .3s cubic-bezier(.2,.8,.2,1) both}
+    .emoji{display:inline-block;animation:rebote .7s .6s cubic-bezier(.2,.8,.2,1) both}
+    .sub{font-size:14px;color:#8A93A6;display:flex;align-items:center;gap:8px;animation:sube .4s .5s cubic-bezier(.2,.8,.2,1) both}
+    .spin{width:14px;height:14px;border-radius:50%;border:2px solid #CBD2DC;border-right-color:transparent;animation:gira .8s linear infinite}
+    .seguir{margin-top:8px;display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 24px;border-radius:999px;background:#111827;color:#FFFFFF;font-weight:700;text-decoration:none;animation:sube .3s both}
+    .aviso{max-width:420px;line-height:1.5;color:#5B6476}
+    .aviso h1{font-size:22px;color:#111827;margin-bottom:8px}
+    .aviso code{background:#F3F4F6;padding:2px 6px;border-radius:6px;font-size:13px}
+    @keyframes pop{0%{opacity:0;transform:scale(.6)}70%{transform:scale(1.06)}100%{opacity:1;transform:scale(1)}}
+    @keyframes sube{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+    @keyframes estrella{from{fill:#E5E7EB;transform:scale(.5)}to{fill:#F5B301;transform:scale(1)}}
+    @keyframes rebote{0%{transform:scale(0) rotate(-20deg)}60%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
+    @keyframes gira{to{transform:rotate(360deg)}}
+    @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-delay:0ms!important}}
+  </style>
+</head>
+<body>
+  <main class="splash" id="splash" hidden aria-live="polite">
+    <div class="logo" id="logo"><span id="ini" aria-hidden="true"></span><img id="img" alt="" hidden></div>
+    <p class="nombre" id="nombre"></p>
+    <div class="estrellas" id="estrellas" hidden aria-label="5 estrellas"></div>
+    <h1 class="msg"><span id="msg"></span> <span class="emoji" aria-hidden="true">😊</span></h1>
+    <p class="sub" id="sub"><span class="spin" aria-hidden="true"></span><span id="subtxt"></span></p>
+    <a class="seguir" id="seguir" hidden>Continuar</a>
+  </main>
+
+  <main class="splash" id="falta" hidden>
+    <div class="aviso">
+      <h1>Falta un paso</h1>
+      <p>Abre este archivo y pega la URL de tu aplicación de Apps Script (termina en <code>/exec</code>) en la constante <code>EXEC_URL</code>.</p>
+    </div>
+  </main>
+
+  <iframe id="app" hidden title="QR Reseñas &amp; Redes" allow="clipboard-write"></iframe>
+
+  <script>
+  'use strict';
+  // ===== 1) PEGA AQUÍ LA URL DE TU APLICACIÓN WEB (Implementar → Aplicación web) =====
+  const EXEC_URL = 'https://script.google.com/macros/s/AKfycbzYzDlIu9Ok8NUCCMpPnTx0pJnvX3mnZ4cF0WfQAXEPGRUXTV9eLlq4mDpO_W_1oH4zuQ/exec';
+
+  // Deben coincidir con SPLASH_DEF de index.html (Apps Script)
+  const DEFECTOS = { google: '¡Regálanos tu reseña!', whatsapp: '¡Escríbenos!', otro: '¡Síguenos!' };
+  const ABRIENDO = {
+    google: 'Abriendo Google Reseñas…', instagram: 'Abriendo Instagram…', tiktok: 'Abriendo TikTok…',
+    facebook: 'Abriendo Facebook…', whatsapp: 'Abriendo WhatsApp…', youtube: 'Abriendo YouTube…',
+    x: 'Abriendo X…', web: 'Abriendo la página…', otro: 'Abriendo…'
+  };
+  const ESTRELLA = '<svg viewBox="-50 -50 100 100" aria-hidden="true"><path d="M0-50L11.23-15.45H47.55L18.17 5.9L29.39 40.45L0 19.1L-29.39 40.45L-18.17 5.9L-47.55-15.45H-11.23Z"/></svg>';
+
+  const $ = id => document.getElementById(id);
+
+  function destino(q) {
+    const g = q.get('g') || '';
+    if (/^ChIJ[\w-]{10,}$/.test(g)) return 'https://search.google.com/local/writereview?placeid=' + g;
+    const to = q.get('to') || '';
+    return /^https:\/\/[^\s<>"']+$/i.test(to) ? to : '';
+  }
+
+  function iniciales(n) {
+    const p = String(n || '').trim().split(/\s+/).filter(Boolean);
+    return p.length ? (p[0][0] + (p[1] ? p[1][0] : '')).toUpperCase() : '★';
+  }
+
+  function bienvenida(q) {
+    const url = destino(q);
+    const sp = $('splash');
+    sp.hidden = false;
+    if (!url) {
+      $('msg').textContent = 'Este código no es válido';
+      $('sub').hidden = true;
+      $('logo').hidden = true;
+      return;
+    }
+    const tipo = /^[a-z]{1,12}$/.test(q.get('t') || '') ? q.get('t') : 'google';
+    const nombre = (q.get('n') || '').slice(0, 60);
+    const mensaje = (q.get('m') || DEFECTOS[tipo] || DEFECTOS.otro).slice(0, 80);
+    const logoId = q.get('l') || '';
+
+    document.title = nombre ? nombre + ' · ' + mensaje : mensaje;
+    $('nombre').textContent = nombre;
+    $('nombre').hidden = !nombre;
+    $('msg').textContent = mensaje;
+    $('subtxt').textContent = ABRIENDO[tipo] || ABRIENDO.otro;
+    $('ini').textContent = iniciales(nombre);
+
+    if (/^[\w-]{10,80}$/.test(logoId)) {
+      const img = $('img');
+      img.alt = nombre ? 'Logo de ' + nombre : 'Logo';
+      img.onload = () => { img.hidden = false; $('ini').hidden = true; };
+      img.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(logoId) + '&sz=w400';
+    }
+
+    if (tipo === 'google') {
+      const box = $('estrellas');
+      let h = '';
+      for (let i = 0; i < 5; i++) h += ESTRELLA.replace('<svg ', '<svg style="animation-delay:' + (450 + i * 110) + 'ms" ');
+      box.innerHTML = h;
+      box.hidden = false;
+    }
+
+    const espera = Math.max(0, Math.min(5000, parseInt(q.get('d'), 10) || 1200));
+    const seguir = $('seguir');
+    seguir.href = url;
+    setTimeout(() => { location.replace(url); }, espera);
+    setTimeout(() => { seguir.hidden = false; }, espera + 2000);
+  }
+
+  function mascara() {
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/(exec|dev)$/.test(EXEC_URL)) {
+      $('falta').hidden = false;
+      return;
+    }
+    const v = new URLSearchParams(location.search).get('v');
+    const app = $('app');
+    app.src = EXEC_URL + (v && /^[a-z]{1,20}$/.test(v) ? '?v=' + v : '');
+    app.hidden = false;
+  }
+
+  (function () {
+    const q = new URLSearchParams(location.search);
+    if (q.has('g') || q.has('to')) bienvenida(q);
+    else mascara();
+  })();
+  </script>
+</body>
+</html>
